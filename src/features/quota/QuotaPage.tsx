@@ -29,6 +29,8 @@ import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
 import { QuotaHeader } from './components/QuotaHeader';
 import { QuotaCard } from './components/QuotaCard';
 import { QuotaTimeline } from './components/QuotaTimeline';
+import { QuotaPoolSection } from './pool/QuotaPoolSection';
+import { readShowEmails, writeShowEmails } from './pool/poolSettings';
 import {
   CARD_ENTRANCE_BUDGET_MS,
   QUOTA_CARD_LAYOUT_KEY,
@@ -89,6 +91,14 @@ export function QuotaPage() {
   const [layout, setLayout] = useState<CardLayout>(() => readCardLayout(QUOTA_CARD_LAYOUT_KEY));
   // Compact cards the user opened to full size; not persisted.
   const [expandedCards, setExpandedCards] = useState<ReadonlySet<string>>(() => new Set());
+  const [showEmails, setShowEmails] = useState(() => readShowEmails());
+  const [poolRefreshToken, setPoolRefreshToken] = useState(0);
+  const toggleEmails = useCallback(() => {
+    setShowEmails((prev) => {
+      writeShowEmails(!prev);
+      return !prev;
+    });
+  }, []);
   const searchInputRef = useRef<HTMLInputElement>(null);
   // 页头 + tabs 的入场级联（标题 → meta → 动作 → tabs，级差 70ms）
   const revealRef = useRevealGroup<HTMLDivElement>();
@@ -294,6 +304,7 @@ export function QuotaPage() {
   const handleRefreshAll = useCallback(() => {
     if (disableControls) return;
     pendingRefreshRef.current = sessionGeneration;
+    setPoolRefreshToken((value) => value + 1);
     void loadFiles();
   }, [disableControls, loadFiles, sessionGeneration]);
 
@@ -391,6 +402,8 @@ export function QuotaPage() {
         refreshing={loading || batchLoading}
         disableControls={disableControls}
         onRefreshAll={handleRefreshAll}
+        showEmails={showEmails}
+        onToggleEmails={toggleEmails}
       />
 
       <section className={styles.workbench}>
@@ -404,6 +417,17 @@ export function QuotaPage() {
             onChange={handleTabChange}
           />
         </div>
+
+        {connectionStatus === 'connected' && (
+          <QuotaPoolSection
+            tab={tab}
+            entries={entries}
+            quotaFor={getQuota}
+            resolvedTheme={resolvedTheme}
+            showEmails={showEmails}
+            refreshToken={poolRefreshToken}
+          />
+        )}
 
         <div className={styles.toolbar}>
           <div className={styles.search}>
