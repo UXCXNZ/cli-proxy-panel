@@ -1,0 +1,75 @@
+/**
+ * Our skin over upstream's styles: a neutral near-black dark theme and a
+ * plainer, larger sidebar. Everything is an override in this one file, loaded
+ * last, so upstream's style files stay untouched and merge cleanly.
+ */
+
+[data-theme='dark'] {
+  --bg-secondary: #0a0a0a; // page
+  --bg-primary: #111111; // cards, sidebar
+  --bg-tertiary: #1a1a1a; // hover, inset controls
+  --bg-hover: #212121;
+  --bg-quinary: #0d0d0d;
+  --floating-surface: #1c1c1c;
+  --floating-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
+
+  --text-primary: #fafafa;
+  --text-secondary: #b8b8b8;
+  --text-tertiary: #8c8c8c;
+  --text-quaternary: #616161;
+
+  --border-color: #232323;
+  --border-primary: #303030;
+  --border-hover: #404040;
+
+  --primary-color: #9a9a9a;
+  --primary-hover: #adadad;
+  --primary-active: #bdbdbd;
+
+  --count-badge-bg: rgba(154, 154, 154, 0.2);
+}
+
+[data-theme='dark'] .sidebar {
+  background: var(--bg-secondary);
+}
+
+/* ---------- sidebar: no section headings, larger rows ---------- */
+
+.sidebar:not(.collapsed) {
+  padding: 18px 12px;
+
+  .sidebar-header {
+    padding: 4px 4px 16px;
+    border-bottom: 0;
+  }
+
+  .sidebar-brand {
+    gap: 12px;
+  }
+
+  .sidebar-brand-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+
+  .sidebar-brand-title {
+    font-size: 19px;
+    letter-spacing: -0.01em;
+  }
+
+  .nav-section {
+    gap: 14px;
+  }
+
+  .nav-group-label {
+    display: none;
+  }
+
+  .nav-item {
+    padding: 9px 12px;
+    font-size: 14.5px;
+    font-weight: 500;
+    gap: 12px;
+  }
+}
