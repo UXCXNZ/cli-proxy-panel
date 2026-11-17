@@ -1,0 +1,68 @@
+/* DEV-ONLY preview shell: never in the production bundle. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 100vh;
+  padding: 32px clamp(16px, 4vw, 48px) 64px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.heading {
+  margin: 0;
+  font-size: 17px;
+}
+
+.caption {
+  max-width: 80ch;
+  margin: 6px 0 12px;
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+}
+
+.section {
+  margin-top: 16px;
+}
+
+.narrow {
+  max-width: 520px;
+}
+
+.staticModal {
+  width: min(440px, 100%);
+  padding: 22px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--bg-primary);
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 19px;
+  }
+}
+
+.staticFooter {
+  margin-top: 16px;
+}

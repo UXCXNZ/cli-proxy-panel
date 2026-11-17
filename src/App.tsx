@@ -31,6 +31,15 @@ const devPreviewRoutes = import.meta.env.DEV
           return { Component: QuotaTierPreview };
         },
       },
+      {
+        path: '/__preview/accounts',
+        HydrateFallback: () => null,
+        lazy: async () => {
+          const { AccountsPreview } =
+            await import('@/features/quota/accounts/preview/AccountsPreview');
+          return { Component: AccountsPreview };
+        },
+      },
     ]
   : [];
 
