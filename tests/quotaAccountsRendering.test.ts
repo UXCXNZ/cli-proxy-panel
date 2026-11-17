@@ -90,7 +90,7 @@ describe('account card rendering', () => {
   test('shows the verdict, the resets line and all three actions', () => {
     const markup = render();
     expect(markup).toContain('Fable is spent');
-    expect(markup).toContain('Or use one of 4 free resets.');
+    expect(markup).toContain('Or use a free reset.');
     expect(markup).toContain('4 free resets · first expires');
     for (const action of ['Use a reset', 'Details', 'Refresh']) expect(markup).toContain(action);
     expect(markup).not.toContain('DETAILS');

@@ -107,7 +107,7 @@ describe('verdict rules', () => {
     expect(verdictTone(verdict!)).toBe('low');
     const words = verdictText(t, verdict!, NOW, 'en');
     expect(words.title).toBe('Fable is spent');
-    expect(words.sub).toMatch(/^Back .+, in 19 hours\. Or use one of 4 free resets\.$/);
+    expect(words.sub).toMatch(/^Back .+, in 19 hours\. Or use a free reset\.$/);
   });
 
   test('with several spent, the whole-account weekly limit wins', () => {
@@ -117,14 +117,14 @@ describe('verdict rules', () => {
     expect(words.sub).toMatch(/^Back .+, in 4 days\.$/);
   });
 
-  test('a lone free reset is not "one of 1"', () => {
+  test('the sub line never states a count, so it cannot disagree with the footer', () => {
     const words = verdictText(
       t,
       verdictFor([weekly(0)], () => 1, NOW)!,
       NOW,
       'en'
     );
-    expect(words.sub).toEndWith('Or use your 1 free reset.');
+    expect(words.sub).toEndWith('Or use a free reset.');
   });
 
   test('the lowest limit at the threshold or under reads as running low', () => {
