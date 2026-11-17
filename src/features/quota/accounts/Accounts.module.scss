@@ -1,0 +1,656 @@
+@use '../../../styles/mixins' as *;
+
+/* ============================================================
+ * Account cards, table, resets list and the reset confirmation.
+ * Theme tokens only, so light and dark both work. Colour always
+ * describes what is LEFT: green, amber at half, red at a fifth.
+ * No continuously running animation.
+ * ============================================================ */
+
+$warn-text: color-mix(in srgb, var(--error-color) 82%, var(--text-primary));
+$mid-text: color-mix(in srgb, var(--quota-medium-color) 70%, var(--text-primary));
+$good-text: color-mix(in srgb, var(--success-color) 78%, var(--text-primary));
+
+@mixin tone-fill {
+  &[data-tone='ok'] {
+    background: var(--success-color);
+  }
+
+  &[data-tone='mid'] {
+    background: var(--quota-medium-color);
+  }
+
+  &[data-tone='low'] {
+    background: var(--error-color);
+  }
+}
+
+/* ---------- toolbar switches ---------- */
+
+.seg {
+  display: inline-flex;
+  flex: none;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--bg-tertiary);
+
+  button {
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+
+    &[aria-pressed='true'] {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      box-shadow: 0 0 0 1px var(--border-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 1px;
+    }
+  }
+}
+
+/* ---------- cards ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr));
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+}
+
+.card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+
+.mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--bg-tertiary) 60%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+
+  img {
+    display: block;
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+}
+
+.name {
+  min-width: 0;
+  font-weight: 600;
+  @include text-ellipsis;
+}
+
+.plan {
+  margin-left: auto;
+  padding: 1px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.verdict {
+  margin: 0 0 2px;
+  font-size: 17px;
+  font-weight: 600;
+
+  &[data-tone='ok'] {
+    color: $good-text;
+  }
+
+  &[data-tone='mid'] {
+    color: $mid-text;
+  }
+
+  &[data-tone='low'] {
+    color: $warn-text;
+  }
+}
+
+.sub {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+}
+
+.note {
+  margin: 0 0 8px;
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+}
+
+.limit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin-top: 12px;
+}
+
+.limitLabel {
+  min-width: 0;
+  color: var(--text-secondary);
+  @include text-ellipsis;
+}
+
+.limitNum {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+
+  small {
+    margin-left: 4px;
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  &[data-spent] {
+    color: $warn-text;
+  }
+}
+
+.track {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+
+  i {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    @include tone-fill;
+  }
+}
+
+.foot {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+}
+
+.footLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--border-hover);
+  text-underline-offset: 3px;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.footMessage {
+  margin-top: 6px;
+  color: $warn-text;
+}
+
+/* The actions keep their own row, share it evenly, and never wrap. */
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+
+  button {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.quiet {
+  padding: 5px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .quiet:hover:not(:disabled) {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+  }
+}
+
+/* ---------- idle, loading, error ---------- */
+
+.idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 76px;
+  padding: 12px 10px;
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  background: none;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .idle:hover:not(:disabled) {
+    border-style: solid;
+    color: var(--text-secondary);
+  }
+}
+
+/* Still blocks: a loading card holds its shape without a moving sweep. */
+.skeleton {
+  display: grid;
+  gap: 10px;
+  padding: 4px 0;
+
+  span[aria-hidden] {
+    display: block;
+    height: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+
+    &:first-of-type {
+      width: 45%;
+    }
+  }
+}
+
+.error {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--warning-border);
+  border-radius: 8px;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- details ---------- */
+
+.details {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-tertiary) 55%, transparent);
+  min-width: 0;
+}
+
+.fileRow {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+
+  code {
+    min-width: 0;
+    color: var(--text-secondary);
+    font-family: $font-mono;
+    font-size: 12px;
+    @include text-ellipsis;
+  }
+}
+
+.detailsBody {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+/* ---------- resets list ---------- */
+
+.resets {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  list-style: none;
+}
+
+.resetRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border-top: 1px solid var(--border-color);
+  font-size: 13px;
+
+  &:first-child {
+    border-top: 0;
+  }
+}
+
+.resetWhat {
+  min-width: 0;
+
+  b {
+    font-weight: 600;
+  }
+
+  span {
+    display: block;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.resetExpiry,
+.resetSoon {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.resetSoon {
+  color: $mid-text;
+  font-weight: 600;
+}
+
+/* ---------- table ---------- */
+
+.scroll {
+  // Positioned so the visually hidden header stays inside the scroll area.
+  position: relative;
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-color);
+    font-weight: 400;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  thead th {
+    border-top: 0;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-weight: 500;
+  }
+}
+
+.rowWho {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cell {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  min-width: 150px;
+
+  b {
+    font-weight: 600;
+
+    small {
+      margin-left: 4px;
+      font-size: inherit;
+    }
+
+    &[data-spent] {
+      color: $warn-text;
+    }
+  }
+
+  .track {
+    grid-column: auto;
+  }
+}
+
+.dim {
+  color: var(--text-tertiary);
+}
+
+.faint {
+  color: var(--text-quaternary, var(--text-tertiary));
+}
+
+.rowNote {
+  display: block;
+  color: $warn-text;
+  font-size: 12px;
+  white-space: normal;
+}
+
+.rowActions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* ---------- reset confirmation (inside the shared Modal) ---------- */
+
+.modalAccount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+}
+
+.modalLead {
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+}
+
+.change {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) 1fr auto;
+  gap: 10px 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.changeLabel {
+  color: var(--text-secondary);
+}
+
+.changeNums {
+  font-weight: 600;
+  white-space: nowrap;
+
+  s {
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  em {
+    margin: 0 6px;
+    color: var(--text-tertiary);
+    font-style: normal;
+    font-weight: 500;
+  }
+}
+
+.changeSame {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* Two tones: where the limit is now, and where the reset takes it. */
+.duo {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+}
+
+.duoAfter {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--success-color) 34%, transparent);
+}
+
+.duoNow {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  @include tone-fill;
+}
+
+.modalNote {
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.modalElse {
+  margin: 4px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.modalTail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+
+  :global(.btn) {
+    width: auto;
+    white-space: nowrap;
+  }
+}
+
+.modalKeep {
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+  line-height: 1.35;
+
+  b {
+    display: block;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+}
+
+/* Cancel and the one solid button stay together, at the right, when the tail wraps. */
+.modalActions {
+  display: inline-flex;
+  flex: none;
+  gap: 10px;
+  margin-left: auto;
+}

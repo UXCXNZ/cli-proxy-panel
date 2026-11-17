@@ -30,6 +30,9 @@ import { QuotaHeader } from './components/QuotaHeader';
 import { QuotaCard } from './components/QuotaCard';
 import { QuotaTimeline } from './components/QuotaTimeline';
 import { QuotaPoolSection } from './pool/QuotaPoolSection';
+import { AccountsSwitches } from './accounts/AccountsSwitches';
+import { AccountsView } from './accounts/AccountsView';
+import { ACCOUNTS_VIEW_ENABLED, useAccountsSettings } from './accounts/accountsSettings';
 import { readShowEmails, writeShowEmails } from './pool/poolSettings';
 import {
   CARD_ENTRANCE_BUDGET_MS,
@@ -93,6 +96,7 @@ export function QuotaPage() {
   const [expandedCards, setExpandedCards] = useState<ReadonlySet<string>>(() => new Set());
   const [showEmails, setShowEmails] = useState(() => readShowEmails());
   const [poolRefreshToken, setPoolRefreshToken] = useState(0);
+  const accountsSettings = useAccountsSettings();
   const toggleEmails = useCallback(() => {
     setShowEmails((prev) => {
       writeShowEmails(!prev);
@@ -466,7 +470,11 @@ export function QuotaPage() {
                 size="sm"
               />
             </div>
-            <CardLayoutSwitch value={layout} onChange={handleLayoutChange} />
+            {ACCOUNTS_VIEW_ENABLED ? (
+              <AccountsSwitches settings={accountsSettings} />
+            ) : (
+              <CardLayoutSwitch value={layout} onChange={handleLayoutChange} />
+            )}
           </div>
         </div>
 
@@ -509,6 +517,22 @@ export function QuotaPage() {
                 </Button>
               )
             }
+          />
+        ) : ACCOUNTS_VIEW_ENABLED ? (
+          <AccountsView
+            entries={pageItems}
+            quotaFor={getQuota}
+            resolvedTheme={resolvedTheme}
+            settings={accountsSettings}
+            showEmails={showEmails}
+            canUseActions={canUseActions}
+            resettingKey={resettingQuotaName}
+            creditOverageCountFor={(entry) =>
+              codexCreditOverageCounts.get(codexCreditOverageKey(entry.file) ?? '')
+            }
+            onRefresh={(entry) => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
+            onReset={(entry) => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
+            renderLegacyCard={renderCard}
           />
         ) : (
           // One container for every layout, so switching layouts never remounts the cards.
