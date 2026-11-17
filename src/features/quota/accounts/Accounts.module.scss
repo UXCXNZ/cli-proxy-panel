@@ -242,11 +242,10 @@ $good-text: color-mix(in srgb, var(--success-color) 78%, var(--text-primary));
   gap: 8px;
   margin-top: 10px;
 
+  // Each button is at least as wide as its words, then they share what is left.
   button {
-    flex: 1 1 0;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex: 1 1 auto;
+    white-space: nowrap;
   }
 }
 
