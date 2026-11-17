@@ -1,0 +1,105 @@
+# Ours, not upstream's. Once a week it tries to merge upstream's dashboard into
+# the `pool` branch and reports what happened, so we never drift for long and
+# never take upstream's changes unread:
+#   - merges cleanly: opens a pull request against `pool` in THIS repository,
+#     with the result of the full check, for a person or an agent to read;
+#   - conflicts: opens an issue naming the files, and changes nothing.
+# It never publishes a release. Scheduled runs need `pool` to be the default branch.
+name: Upstream sync
+
+on:
+  schedule:
+    - cron: '0 19 * * 0' # Sunday 19:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  UPSTREAM: https://github.com/router-for-me/Cli-Proxy-API-Management-Center.git
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  sync:
+    if: github.repository != 'router-for-me/Cli-Proxy-API-Management-Center'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pool
+          fetch-depth: 0
+
+      - name: Try the merge
+        id: merge
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "$UPSTREAM"
+          git fetch --quiet upstream main
+          behind=$(git rev-list --count HEAD..upstream/main)
+          echo "behind=$behind" >> "$GITHUB_OUTPUT"
+          echo "upstream=$(git rev-parse --short upstream/main)" >> "$GITHUB_OUTPUT"
+          if [ "$behind" = "0" ]; then
+            echo "state=current" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          branch="sync/upstream-$(date -u +%Y-%m-%d)"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          git checkout --quiet -b "$branch"
+          if git merge --no-edit upstream/main; then
+            echo "state=clean" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "files<<EOF_FILES"
+              git diff --name-only --diff-filter=U
+              echo "EOF_FILES"
+            } >> "$GITHUB_OUTPUT"
+            git merge --abort
+            echo "state=conflict" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report a conflict
+        if: steps.merge.outputs.state == 'conflict'
+        run: |
+          gh issue create \
+            --title "Upstream sync: ${{ steps.merge.outputs.behind }} commits behind, merge conflicts" \
+            --body "Merging upstream \`${{ steps.merge.outputs.upstream }}\` into \`pool\` conflicts in:
+
+          \`\`\`
+          ${{ steps.merge.outputs.files }}
+          \`\`\`
+
+          Nothing was changed. Merge locally: \`git fetch upstream && git merge upstream/main\` on \`pool\`, resolve, run \`bun run verify\`."
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.merge.outputs.state == 'clean'
+        with:
+          bun-version: '1.4.3'
+
+      - name: Run the full check on the merged code
+        if: steps.merge.outputs.state == 'clean'
+        id: verify
+        run: |
+          bun install --frozen-lockfile
+          if bun run verify > verify.log 2>&1; then echo "result=passes" >> "$GITHUB_OUTPUT"; else echo "result=FAILS" >> "$GITHUB_OUTPUT"; fi
+          tail -n 25 verify.log
+
+      - name: Open the pull request
+        if: steps.merge.outputs.state == 'clean'
+        run: |
+          set -uo pipefail
+          branch="${{ steps.merge.outputs.branch }}"
+          if ! git push --quiet origin "$branch"; then
+            gh issue create \
+              --title "Upstream sync: clean merge could not be pushed" \
+              --body "Upstream \`${{ steps.merge.outputs.upstream }}\` merges cleanly into \`pool\` and the full check ${{ steps.verify.outputs.result }}, but the branch could not be pushed. This usually means upstream changed a workflow file, which this job may not push. Merge locally: \`git fetch upstream && git merge upstream/main\` on \`pool\`."
+            exit 0
+          fi
+          gh pr create --repo "$GH_REPO" --base pool --head "$branch" \
+            --title "Upstream sync: ${{ steps.merge.outputs.behind }} commits, check ${{ steps.verify.outputs.result }}" \
+            --body "Merges upstream \`${{ steps.merge.outputs.upstream }}\` into \`pool\` with no conflicts. The full check (tests, lint, types, build) ${{ steps.verify.outputs.result }} on the merged code.
+
+          Read the upstream changes before merging. Merging this does not publish anything: the dashboard only changes when a new release is made from \`pool\`."
