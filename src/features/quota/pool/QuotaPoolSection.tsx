@@ -86,7 +86,6 @@ export function QuotaPoolSection(props: QuotaPoolSectionProps) {
   const { tab, entries, quotaFor, resolvedTheme, showEmails, refreshToken } = props;
   const { t, i18n } = useTranslation();
   const apiBase = useAuthStore((state) => state.apiBase);
-  const managementKey = useAuthStore((state) => state.managementKey);
   const now = useNow();
 
   const [settings, setSettingsState] = useState<PoolSettings>(() => readPoolSettings());
@@ -111,18 +110,15 @@ export function QuotaPoolSection(props: QuotaPoolSectionProps) {
   const lastFetchRef = useRef(0);
 
   const fetchHistory = useCallback(
-    async (pollFirst: boolean) => {
-      if (!recorderUrl || !managementKey) return;
+    async () => {
+      if (!recorderUrl) return;
       const requestId = ++requestRef.current;
       lastFetchRef.current = Date.now();
       setLoad((prev) => (prev.status === 'ready' ? prev : { status: 'loading' }));
       try {
-        if (pollFirst)
-          await quotaRecorderApi.poll(recorderUrl, managementKey).catch(() => undefined);
         const to = Math.max(Date.now(), span.endMs);
         const history = await quotaRecorderApi.history(
           recorderUrl,
-          managementKey,
           span.startMs - HISTORY_LEAD_MS,
           to
         );
@@ -136,11 +132,11 @@ export function QuotaPoolSection(props: QuotaPoolSectionProps) {
         });
       }
     },
-    [recorderUrl, managementKey, span.startMs, span.endMs]
+    [recorderUrl, span.startMs, span.endMs]
   );
 
   useEffect(() => {
-    void fetchHistory(false);
+    void fetchHistory();
     return () => {
       requestRef.current += 1;
     };
@@ -148,14 +144,14 @@ export function QuotaPoolSection(props: QuotaPoolSectionProps) {
 
   // Minute clock drives a gentle refetch while the page stays open.
   useEffect(() => {
-    if (Date.now() - lastFetchRef.current >= REFETCH_MS) void fetchHistory(false);
+    if (Date.now() - lastFetchRef.current >= REFETCH_MS) void fetchHistory();
   }, [now, fetchHistory]);
 
   const refreshTokenRef = useRef(refreshToken);
   useEffect(() => {
     if (refreshTokenRef.current === refreshToken) return;
     refreshTokenRef.current = refreshToken;
-    void fetchHistory(true);
+    void fetchHistory();
   }, [refreshToken, fetchHistory]);
 
   /* ---------- live samples from the cards ----------

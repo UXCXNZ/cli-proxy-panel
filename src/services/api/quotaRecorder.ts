@@ -1,10 +1,10 @@
 /**
  * Quota recorder client.
  *
- * The recorder is a sidecar next to the proxy (see `recorder/`) that samples
- * every credential's quota on a schedule. It is a separate origin, so this does
- * not go through `apiClient`; it authenticates with the same management key,
- * which the recorder verifies against the Management API.
+ * The recorder runs next to the proxy and saves what every credential has left
+ * on a schedule; a small read-only server beside it answers `GET /history`.
+ * It is a separate origin, so this does not go through `apiClient`, and it
+ * takes no key: the management key is never sent anywhere but the proxy.
  */
 
 import axios from 'axios';
@@ -48,13 +48,11 @@ const isSnapshot = (value: unknown): value is PoolSnapshot =>
 export const quotaRecorderApi = {
   async history(
     recorderUrl: string,
-    managementKey: string,
     fromMs: number,
     toMs: number
   ): Promise<RecorderHistory> {
     const response = await axios.get<Partial<RecorderHistory>>(`${recorderUrl}/history`, {
       params: { from: Math.floor(fromMs), to: Math.ceil(toMs) },
-      headers: { Authorization: `Bearer ${managementKey}` },
       timeout: RECORDER_TIMEOUT_MS,
     });
     const body = response.data ?? {};
@@ -63,13 +61,5 @@ export const quotaRecorderApi = {
       lastPollAt: typeof body.lastPollAt === 'number' ? body.lastPollAt : null,
       snapshots: Array.isArray(body.snapshots) ? body.snapshots.filter(isSnapshot) : [],
     };
-  },
-
-  /** Ask for an immediate poll; the recorder ignores it right after a scheduled one. */
-  async poll(recorderUrl: string, managementKey: string): Promise<void> {
-    await axios.post(`${recorderUrl}/poll`, null, {
-      headers: { Authorization: `Bearer ${managementKey}` },
-      timeout: RECORDER_TIMEOUT_MS * 3,
-    });
   },
 };
