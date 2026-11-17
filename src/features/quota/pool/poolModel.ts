@@ -404,19 +404,22 @@ export type FutureUsageMode = (typeof FUTURE_USAGE_MODES)[number];
 export const BURN_WINDOWS = [1, 3, 6] as const;
 export type BurnWindowHours = (typeof BURN_WINDOWS)[number];
 
-/** Per-account rate the projection drains at, in percent per hour. */
+/**
+ * Per-account rate the projection drains at, in percent per hour.
+ * Null when the history is too thin to measure one: unknown is never shown as idle.
+ */
 export function projectedRate(
   account: PoolAccount,
   nowMs: number,
   windowHours: number,
   mode: FutureUsageMode
-): number {
+): number | null {
   if (mode === 'none') return 0;
-  const base =
+  const rate =
     mode === 'week'
       ? accountBurnRate(account, nowMs, 24 * 7)
       : accountBurnRate(account, nowMs, windowHours);
-  const rate = base ?? 0;
+  if (rate === null) return null;
   if (mode === 'half') return rate / 2;
   if (mode === 'double') return rate * 2;
   return rate;
@@ -441,47 +444,98 @@ function currentState(account: PoolAccount, nowMs: number) {
   return { value, nextReset: nextResetAfter(point, nowMs), periodHours: point.periodHours };
 }
 
-function projectAccount(
-  account: PoolAccount,
+const EPSILON = 1e-9;
+
+/**
+ * Project every account together, the way the proxy really spends them.
+ *
+ * The pool's demand is the sum of what the accounts burn now. It is shared
+ * among the accounts that still have quota, in proportion to their own burn.
+ * When one runs dry its share moves to the others, because the proxy routes
+ * around a spent account; when every account is dry the demand is unmet and
+ * the pool sits at zero until a reset.
+ */
+function simulatePool(
+  accounts: readonly PoolAccount[],
   nowMs: number,
   horizonMs: number,
-  rate: number
-): AccountProjection | null {
-  const state = currentState(account, nowMs);
-  if (!state) return null;
-  const periodMs = (state.periodHours ?? 0) * HOUR_MS;
-  const points: ChartPoint[] = [{ t: nowMs, value: state.value }];
-  const resets: { t: number; gain: number }[] = [];
-  let emptyAtMs: number | null = state.value <= 0 ? nowMs : null;
+  rates: readonly number[]
+): { projections: AccountProjection[]; drain: ChartPoint[] } {
+  const states = accounts.flatMap((account, index) => {
+    const state = currentState(account, nowMs);
+    if (!state) return [];
+    return [
+      {
+        account,
+        rate: rates[index],
+        basis: rates[index] * account.weight,
+        value: state.value,
+        reset: state.nextReset,
+        periodMs: (state.periodHours ?? 0) * HOUR_MS,
+        points: [{ t: nowMs, value: state.value }] as ChartPoint[],
+        resets: [] as { t: number; gain: number }[],
+        emptyAtMs: state.value <= 0 ? nowMs : (null as number | null),
+      },
+    ];
+  });
+  const demand = states.reduce((sum, state) => sum + state.basis, 0);
+  const drain: ChartPoint[] = [];
+  const pushDrain = (t: number, value: number) => {
+    const previous = drain[drain.length - 1];
+    if (previous && Math.abs(previous.value - value) > EPSILON)
+      drain.push({ t, value: previous.value });
+    drain.push({ t, value });
+  };
+
   let t = nowMs;
-  let value = state.value;
-  let reset = state.nextReset;
-  const perMs = rate / HOUR_MS;
+  // Bounded: each pass ends at a reset, an account running dry, or the horizon.
+  for (let guard = 0; guard < 5000 && t < horizonMs; guard += 1) {
+    const active = states.filter((state) => state.value > EPSILON);
+    const basisSum = active.reduce((sum, state) => sum + state.basis, 0);
+    const weightSum = active.reduce((sum, state) => sum + state.account.weight, 0);
+    // Percent of its own window each active account loses per millisecond.
+    const dropOf = (state: (typeof states)[number]): number => {
+      if (demand <= 0 || !active.includes(state)) return 0;
+      const share = basisSum > 0 ? state.basis / basisSum : state.account.weight / weightSum;
+      return (demand * share) / state.account.weight / HOUR_MS;
+    };
+    pushDrain(t, active.length > 0 ? demand : 0);
 
-  // Bounded: one iteration per reset inside the horizon.
-  for (let guard = 0; guard < 1000 && t < horizonMs; guard += 1) {
-    const segmentEnd = reset !== null && reset < horizonMs ? reset : horizonMs;
-    if (perMs > 0 && value > 0) {
-      const zeroAt = t + value / perMs;
-      if (zeroAt < segmentEnd) {
-        points.push({ t: zeroAt, value: 0 });
-        if (emptyAtMs === null) emptyAtMs = zeroAt;
-        value = 0;
-      } else {
-        value = Math.max(0, value - perMs * (segmentEnd - t));
-      }
+    let next = horizonMs;
+    for (const state of states) {
+      if (state.reset !== null && state.reset > t && state.reset < next) next = state.reset;
+      const drop = dropOf(state);
+      if (drop > 0) next = Math.min(next, t + state.value / drop);
     }
-    points.push({ t: segmentEnd, value });
-    t = segmentEnd;
-    if (segmentEnd === horizonMs) break;
-
-    // Window reset: refill to 100.
-    resets.push({ t: segmentEnd, gain: (100 - value) * account.weight });
-    value = 100;
-    points.push({ t: segmentEnd, value });
-    reset = periodMs > 0 ? segmentEnd + periodMs : null;
+    const drops = states.map(dropOf);
+    states.forEach((state, index) => {
+      const value = Math.max(0, state.value - drops[index] * (next - t));
+      state.value = value <= EPSILON ? 0 : value;
+      state.points.push({ t: next, value: state.value });
+      if (state.value === 0 && state.emptyAtMs === null) state.emptyAtMs = next;
+    });
+    t = next;
+    if (t >= horizonMs) break;
+    for (const state of states) {
+      if (state.reset === null || state.reset > t) continue;
+      // Window reset: refill to 100.
+      state.resets.push({ t, gain: (100 - state.value) * state.account.weight });
+      state.value = 100;
+      state.points.push({ t, value: 100 });
+      state.reset = state.periodMs > 0 ? t + state.periodMs : null;
+    }
   }
-  return { account, rate, points, emptyAtMs, resets };
+  pushDrain(horizonMs, drain[drain.length - 1]?.value ?? 0);
+  return {
+    projections: states.map(({ account, rate, points, emptyAtMs, resets }) => ({
+      account,
+      rate,
+      points,
+      emptyAtMs,
+      resets,
+    })),
+    drain,
+  };
 }
 
 /** Value of a projection just before (`side` = -1) or at/after (`side` = 1) `t`. */
@@ -511,7 +565,8 @@ export interface PoolProjection {
   poolEmptyAtMs: number | null;
   firstEmpty: { accountId: string; label: string; atMs: number } | null;
   nextReset: { t: number; gain: number } | null;
-  burnRate: number;
+  /** Null while the history is too thin to measure any account's burn. */
+  burnRate: number | null;
 }
 
 /** Resets of several accounts landing within this window are labelled as one. */
@@ -524,11 +579,14 @@ export function projectPool(
   windowHours: number,
   mode: FutureUsageMode
 ): PoolProjection {
-  const projections = accounts
-    .map((account) =>
-      projectAccount(account, nowMs, horizonMs, projectedRate(account, nowMs, windowHours, mode))
-    )
-    .filter((projection): projection is AccountProjection => projection !== null);
+  const rates = accounts.map((account) => projectedRate(account, nowMs, windowHours, mode));
+  const measured = rates.some((rate) => rate !== null);
+  const { projections, drain } = simulatePool(
+    accounts,
+    nowMs,
+    horizonMs,
+    rates.map((rate) => rate ?? 0)
+  );
 
   const empty: PoolProjection = {
     points: [],
@@ -537,7 +595,7 @@ export function projectPool(
     poolEmptyAtMs: null,
     firstEmpty: null,
     nextReset: null,
-    burnRate: 0,
+    burnRate: null,
   };
   if (projections.length === 0 || !(horizonMs > nowMs)) return empty;
 
@@ -546,28 +604,17 @@ export function projectPool(
   );
 
   const points: ChartPoint[] = [];
-  const drain: ChartPoint[] = [];
   let poolEmptyAtMs: number | null = null;
   for (const t of times) {
     let left = 0;
     let right = 0;
-    let rate = 0;
     for (const projection of projections) {
       const weight = projection.account.weight;
       left += projectionValueAt(projection.points, t, -1) * weight;
-      const after = projectionValueAt(projection.points, t, 1);
-      right += after * weight;
-      if (after > 0) rate += projection.rate * weight;
+      right += projectionValueAt(projection.points, t, 1) * weight;
     }
     if (points.length > 0 && Math.abs(left - right) > 1e-9) points.push({ t, value: left });
     points.push({ t, value: right });
-    // Drain is a step function: an account's rate stops when it runs dry and
-    // resumes at its reset, so hold the previous rate until this instant.
-    const previousRate = drain[drain.length - 1];
-    if (previousRate && Math.abs(previousRate.value - rate) > 1e-9) {
-      drain.push({ t, value: previousRate.value });
-    }
-    drain.push({ t, value: rate });
     if (poolEmptyAtMs === null && left <= 1e-6) poolEmptyAtMs = t;
     else if (poolEmptyAtMs === null && right <= 1e-6) poolEmptyAtMs = t;
   }
@@ -599,10 +646,12 @@ export function projectPool(
         }
       : null,
     nextReset: jumps.find((jump) => jump.gain >= 0.5) ?? null,
-    burnRate: projections.reduce(
-      (sum, projection) => sum + projection.rate * projection.account.weight,
-      0
-    ),
+    burnRate: measured
+      ? projections.reduce(
+          (sum, projection) => sum + projection.rate * projection.account.weight,
+          0
+        )
+      : null,
   };
 }
 

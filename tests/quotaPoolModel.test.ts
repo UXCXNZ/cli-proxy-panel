@@ -210,3 +210,48 @@ describe('drain projection', () => {
     ]);
   });
 });
+
+describe('load moves to the accounts that are left', () => {
+  // a has 10 left and b has 75; each burns 5 an hour, so the pool burns 10 an hour.
+  const snapshots = Array.from({ length: 5 }, (_, h): PoolSnapshot => ({
+    t: T0 + h * HOUR,
+    samples: [sample('a', 30 - 5 * h, T0 + 400 * HOUR), sample('b', 95 - 5 * h, T0 + 400 * HOUR)],
+  }));
+  const now = T0 + 4 * HOUR;
+  const accounts = buildPoolAccounts(snapshots, 'claude', {});
+  const projection = projectPool(accounts, now, now + 48 * HOUR, 3, 'same');
+
+  test('the pool keeps burning at the same rate after one account runs dry', () => {
+    // a is dry after 2 hours. b then carries all 10 an hour: 65 left lasts 6.5 more hours.
+    expect(projection.firstEmpty?.accountId).toBe('a');
+    expect(projection.firstEmpty?.atMs).toBeCloseTo(now + 2 * HOUR, -3);
+    expect(projection.poolEmptyAtMs).toBeCloseTo(now + 8.5 * HOUR, -3);
+  });
+
+  test('demand is unmet, not gone, once every account is dry', () => {
+    const rates = projection.drain.filter((point) => point.t < now + 8 * HOUR);
+    expect(rates.every((point) => Math.abs(point.value - 10) < 1e-6)).toBe(true);
+    expect(projection.drain[projection.drain.length - 1].value).toBe(0);
+  });
+});
+
+describe('too little history', () => {
+  test('burn is unknown, never zero, from a single reading', () => {
+    const accounts = buildPoolAccounts(
+      [{ t: T0, samples: [sample('a', 80, T0 + 100 * HOUR)] }],
+      'claude',
+      {}
+    );
+    const projection = projectPool(accounts, T0 + HOUR, T0 + 48 * HOUR, 3, 'same');
+    expect(projection.burnRate).toBeNull();
+  });
+
+  test("'none' is a chosen zero, not an unknown", () => {
+    const accounts = buildPoolAccounts(
+      [{ t: T0, samples: [sample('a', 80, T0 + 100 * HOUR)] }],
+      'claude',
+      {}
+    );
+    expect(projectPool(accounts, T0 + HOUR, T0 + 48 * HOUR, 3, 'none').burnRate).toBe(0);
+  });
+});

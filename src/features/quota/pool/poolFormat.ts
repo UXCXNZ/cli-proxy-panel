@@ -28,6 +28,17 @@ export function formatPercent(value: number): string {
   return `${rounded}%`;
 }
 
+/**
+ * A label that tells accounts apart without showing who they are: an email
+ * keeps its first letter and its domain ("c…@example.com"), anything else its
+ * first three characters. Used where a blurred name would leave a hole.
+ */
+export function maskLabel(label: string): string {
+  const at = label.lastIndexOf('@');
+  if (at > 0) return `${label[0]}…${label.slice(at)}`;
+  return label.length > 3 ? `${label.slice(0, 3)}…` : label;
+}
+
 export function formatRate(value: number): string {
   return `${Math.round(value * 10) / 10}%/h`;
 }

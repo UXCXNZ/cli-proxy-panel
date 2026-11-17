@@ -1619,6 +1619,7 @@
       "of_capacity": "trên {{capacity}}",
       "weight_legend": "{{plan}} = {{weight}}x",
       "pool_empty": "Nhóm cạn",
+      "collecting": "Đang thu thập lịch sử",
       "not_by": "Không trước {{date}}",
       "empty_now": "ngay bây giờ",
       "first_empty": "Cạn đầu tiên",

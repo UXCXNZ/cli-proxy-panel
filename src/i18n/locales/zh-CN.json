@@ -1656,6 +1656,7 @@
       "of_capacity": "共 {{capacity}}",
       "weight_legend": "{{plan}} = {{weight}}x",
       "pool_empty": "额度池耗尽",
+      "collecting": "正在收集历史",
       "not_by": "{{date}} 前不会",
       "empty_now": "现在",
       "first_empty": "最先耗尽",

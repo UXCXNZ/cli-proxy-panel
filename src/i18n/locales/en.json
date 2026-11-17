@@ -1663,6 +1663,7 @@
       "of_capacity": "of {{capacity}}",
       "weight_legend": "{{plan}} = {{weight}}x",
       "pool_empty": "Pool empty",
+      "collecting": "Collecting history",
       "not_by": "Not by {{date}}",
       "empty_now": "now",
       "first_empty": "First empty",

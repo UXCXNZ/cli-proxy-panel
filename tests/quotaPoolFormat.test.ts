@@ -3,6 +3,7 @@ import {
   clipSeries,
   formatDuration,
   formatPercent,
+  maskLabel,
   niceCeiling,
   seriesValueAt,
 } from '../src/features/quota/pool/poolFormat';
@@ -50,5 +51,13 @@ describe('series geometry', () => {
     expect(seriesValueAt(series, 10)).toBe(150);
     expect(seriesValueAt(series, 5)).toBe(75);
     expect(seriesValueAt(series, 25)).toBeNull();
+  });
+});
+
+describe('maskLabel', () => {
+  test('keeps an email tellable apart without showing who it is', () => {
+    expect(maskLabel('jo-anne.smith@example.com')).toBe('j…@example.com');
+    expect(maskLabel('claude-1234abcd.json')).toBe('cla…');
+    expect(maskLabel('ab')).toBe('ab');
   });
 });

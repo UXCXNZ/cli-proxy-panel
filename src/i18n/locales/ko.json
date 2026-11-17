@@ -1663,6 +1663,7 @@
       "of_capacity": "/ {{capacity}}",
       "weight_legend": "{{plan}} = {{weight}}x",
       "pool_empty": "풀 소진",
+      "collecting": "기록 수집 중",
       "not_by": "{{date}}까지 없음",
       "empty_now": "지금",
       "first_empty": "가장 먼저 소진",

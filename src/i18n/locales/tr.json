@@ -1663,6 +1663,7 @@
       "of_capacity": "/ {{capacity}}",
       "weight_legend": "{{plan}} = {{weight}}x",
       "pool_empty": "Havuz biter",
+      "collecting": "Geçmiş toplanıyor",
       "not_by": "{{date}} öncesinde değil",
       "empty_now": "şimdi",
       "first_empty": "İlk biten",

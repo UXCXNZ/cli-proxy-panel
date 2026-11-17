@@ -42,7 +42,7 @@ import {
   type PoolSample,
   type PoolSnapshot,
 } from './poolModel';
-import { formatDuration, formatPercent, formatRate, niceCeiling } from './poolFormat';
+import { formatDuration, formatPercent, formatRate, maskLabel, niceCeiling } from './poolFormat';
 import { readPoolSettings, writePoolSettings, type PoolSettings } from './poolSettings';
 import { QuotaPoolChart } from './QuotaPoolChart';
 import styles from './QuotaPool.module.scss';
@@ -109,31 +109,28 @@ export function QuotaPoolSection(props: QuotaPoolSectionProps) {
   const requestRef = useRef(0);
   const lastFetchRef = useRef(0);
 
-  const fetchHistory = useCallback(
-    async () => {
-      if (!recorderUrl) return;
-      const requestId = ++requestRef.current;
-      lastFetchRef.current = Date.now();
-      setLoad((prev) => (prev.status === 'ready' ? prev : { status: 'loading' }));
-      try {
-        const to = Math.max(Date.now(), span.endMs);
-        const history = await quotaRecorderApi.history(
-          recorderUrl,
-          span.startMs - HISTORY_LEAD_MS,
-          to
-        );
-        if (requestId !== requestRef.current) return;
-        setLoad({ status: 'ready', ...history });
-      } catch (error) {
-        if (requestId !== requestRef.current) return;
-        setLoad({
-          status: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    },
-    [recorderUrl, span.startMs, span.endMs]
-  );
+  const fetchHistory = useCallback(async () => {
+    if (!recorderUrl) return;
+    const requestId = ++requestRef.current;
+    lastFetchRef.current = Date.now();
+    setLoad((prev) => (prev.status === 'ready' ? prev : { status: 'loading' }));
+    try {
+      const to = Math.max(Date.now(), span.endMs);
+      const history = await quotaRecorderApi.history(
+        recorderUrl,
+        span.startMs - HISTORY_LEAD_MS,
+        to
+      );
+      if (requestId !== requestRef.current) return;
+      setLoad({ status: 'ready', ...history });
+    } catch (error) {
+      if (requestId !== requestRef.current) return;
+      setLoad({
+        status: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [recorderUrl, span.startMs, span.endMs]);
 
   useEffect(() => {
     void fetchHistory();
@@ -467,18 +464,17 @@ function PoolCard(props: PoolCardProps) {
     return niceCeiling(Math.max(1, ...values) * 1.15);
   }, [isDrain, drain, projection.drain]);
 
-  const masked = (label: string) => (
-    <span className={showEmails ? undefined : styles.masked} aria-hidden={!showEmails || undefined}>
-      {label}
-    </span>
-  );
+  // A headline figure must stay readable, so a hidden name is shortened here, not blurred.
+  const masked = (label: string) => (showEmails ? label : maskLabel(label));
 
   const poolEmptyValue =
-    projection.poolEmptyAtMs === null
-      ? t('quota_management.pool.not_by', { date: formatters.date(horizon) })
-      : projection.poolEmptyAtMs <= now
-        ? t('quota_management.pool.empty_now')
-        : formatters.time(projection.poolEmptyAtMs);
+    projection.burnRate === null && summary.remaining > 0
+      ? t('quota_management.pool.collecting')
+      : projection.poolEmptyAtMs === null
+        ? t('quota_management.pool.not_by', { date: formatters.date(horizon) })
+        : projection.poolEmptyAtMs <= now
+          ? t('quota_management.pool.empty_now')
+          : formatters.time(projection.poolEmptyAtMs);
 
   return (
     <article className={styles.card} style={{ ['--pool-color' as string]: color }}>
@@ -538,7 +534,9 @@ function PoolCard(props: PoolCardProps) {
           <div>
             <dt>{t('quota_management.pool.burn_last', { hours: settings.burnWindow })}</dt>
             <dd>
-              {recordedBurn === null ? t('quota_management.pool.none') : formatRate(recordedBurn)}
+              {recordedBurn === null
+                ? t('quota_management.pool.collecting')
+                : formatRate(recordedBurn)}
             </dd>
           </div>
         </dl>
