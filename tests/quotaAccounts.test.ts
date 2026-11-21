@@ -250,9 +250,37 @@ describe('limits derived from upstream quota states', () => {
     expect(limits[0].resetAtMs).toBe(1785902974 * 1000);
   });
 
+  test('Antigravity keeps fractional Gemini limits and leaves the other groups to Details', () => {
+    const resetTime = '2026-11-21T04:30:15Z';
+    const limits = deriveLimits('antigravity', {
+      groups: [
+        {
+          id: 'third-party',
+          buckets: [{ id: '3p-5h', remainingFraction: 0.3 }],
+        },
+        {
+          id: 'gemini',
+          buckets: [
+            { id: 'gemini-weekly', remainingFraction: 0.9978293 },
+            { id: 'gemini-5h', remainingFraction: 0.9924027, resetTime },
+          ],
+        },
+        {
+          id: 'argon',
+          buckets: [{ id: 'gemini-argon-wtu-weekly', remainingFraction: 0.2 }],
+        },
+      ],
+    });
+
+    expect(limits?.map(({ id }) => id)).toEqual(['gemini-5h', 'gemini-weekly']);
+    expect(limits?.[0].resetAtMs).toBe(Date.parse(resetTime));
+    expect(limits?.map(({ left }) => figureFor(left, 'left'))).toEqual([99.24, 99.78]);
+    expect(limits?.map(({ left }) => figureFor(left, 'used'))).toEqual([0.76, 0.22]);
+    expect(deriveLimits('antigravity', { groups: [{ buckets: [] }] })).toEqual([]);
+  });
+
   test('other providers are not derived, so the page keeps upstream cards for them', () => {
     expect(deriveLimits('kimi', { status: 'success', rows: [] })).toBeNull();
-    expect(deriveLimits('antigravity', { status: 'success', groups: [] })).toBeNull();
   });
 
   test('Claude keeps its last figures while refreshing; other states need success', () => {

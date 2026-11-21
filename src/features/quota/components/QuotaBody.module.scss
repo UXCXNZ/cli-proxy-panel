@@ -191,6 +191,23 @@
   color: var(--text-tertiary);
 }
 
+[data-antigravity-quota-row] {
+  flex-wrap: wrap;
+  gap: 3px 8px;
+
+  .quotaModel {
+    flex-shrink: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .quotaMeta {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
 @include mobile {
   .quotaRowHeader {
     flex-direction: column;

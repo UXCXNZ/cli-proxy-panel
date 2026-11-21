@@ -194,6 +194,14 @@ describe('accounts view on the quota page', () => {
       file: { name: 'claude-ada@example.com.json', type: 'claude', email: 'ada@example.com' },
     },
     { type: 'codex', file: { name: 'codex-team.json', type: 'codex' } },
+    {
+      type: 'antigravity',
+      file: {
+        name: 'antigravity-gemini@example.com.json',
+        type: 'antigravity',
+        email: 'gemini@example.com',
+      },
+    },
     { type: 'kimi', file: { name: 'kimi.json', type: 'kimi' } },
   ];
   const quotas: Record<string, QuotaCardState & Record<string, unknown>> = {
@@ -211,6 +219,25 @@ describe('accounts view on the quota page', () => {
       rateLimitResetCreditsAvailableCount: 3,
       windows: [
         { id: 'weekly', label: '', usedPercent: 35, resetLabel: '', resetAtMs: NOW + 2 * DAY },
+      ],
+    },
+    antigravity: {
+      status: 'success',
+      subscription: { plan: 'pro', tierName: null, tierId: null },
+      groups: [
+        {
+          id: 'gemini',
+          label: 'Gemini models',
+          buckets: [
+            { id: 'gemini-5h', label: '5-hour limit', remainingFraction: 0.9924027 },
+            { id: 'gemini-weekly', label: 'Weekly limit', remainingFraction: 0.9978293 },
+          ],
+        },
+        {
+          id: 'third-party',
+          label: 'Claude and GPT models',
+          buckets: [{ id: '3p-weekly', label: 'Weekly limit', remainingFraction: 0.42 }],
+        },
       ],
     },
   };
@@ -232,7 +259,7 @@ describe('accounts view on the quota page', () => {
       })
     );
 
-  test('cards: the email is the name, Claude and Codex are ours, the rest stay upstream', () => {
+  test('cards: Claude and Codex keep their figures and reset actions', () => {
     const markup = view({ view: 'cards', mode: 'left' });
     expect(markup).toContain('ada@example.com');
     expect(markup).not.toContain('claude-ada@example.com.json');
@@ -241,7 +268,23 @@ describe('accounts view on the quota page', () => {
     expect(markup).toContain('65%<small>left</small>');
     expect(markup).toContain('3 free resets');
     expect(markup).toContain('LEGACY kimi.json');
-    expect(markup.match(/<article/g)?.length).toBe(2);
+    expect(markup.match(/<article/g)?.length).toBe(3);
+  });
+
+  test('Antigravity has two Gemini figures, a Pro badge and its own Details and Refresh', () => {
+    const card = view({ view: 'cards', mode: 'left' })
+      .split('<article')
+      .find((item) => item.includes('gemini@example.com'));
+    expect(card).toContain('>Pro</span>');
+    expect(card).toContain('Gemini 5-hour');
+    expect(card).toContain('99.24%<small>left</small>');
+    expect(card).toContain('Gemini weekly');
+    expect(card).toContain('99.78%<small>left</small>');
+    expect(card).toContain('>Details</button>');
+    expect(card).toContain('>Refresh</button>');
+    expect(card).not.toContain('Claude and GPT models');
+    expect(card).not.toContain('free resets');
+    expect(card).not.toContain('Use a reset');
   });
 
   test('hiding emails masks the name', () => {
@@ -260,6 +303,7 @@ describe('accounts view on the quota page', () => {
     expect(markup).toContain('35%<small>used</small>');
     expect(markup).toContain('Not on this plan');
     expect(markup).toContain('Use one');
+    expect(markup).toContain('LEGACY antigravity-gemini@example.com.json');
     expect(markup).toContain('LEGACY kimi.json');
   });
 });

@@ -1,9 +1,8 @@
 /**
  * The accounts on the quota page, as cards or as a table.
  *
- * Claude and Codex are drawn here. Every other provider keeps upstream's own
- * card, passed in as `renderLegacyCard`, so nothing is hidden for a provider
- * whose limits this folder does not derive.
+ * Claude, Codex and Antigravity share the account card. The table summarizes
+ * Claude and Codex; Antigravity keeps its full grouped card in that view.
  */
 
 import type { ReactNode } from 'react';
@@ -80,7 +79,8 @@ export function AccountsView(props: AccountsViewProps) {
     );
   }
 
-  const rows = entries.filter((entry) => isAccountCardProvider(entry.type));
+  const isTableEntry = (entry: QuotaFileEntry) => entry.type === 'claude' || entry.type === 'codex';
+  const rows = entries.filter(isTableEntry);
   const columns = tableColumns(
     rows.map((entry) => accountFigures(entry.type, quotaFor(entry)).limits)
   );
@@ -96,7 +96,7 @@ export function AccountsView(props: AccountsViewProps) {
       {rows.length < entries.length && (
         <div className={styles.grid}>
           {entries.map((entry, index) =>
-            isAccountCardProvider(entry.type) ? null : props.renderLegacyCard(entry, index)
+            isTableEntry(entry) ? null : props.renderLegacyCard(entry, index)
           )}
         </div>
       )}

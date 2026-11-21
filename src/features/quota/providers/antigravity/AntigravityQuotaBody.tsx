@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import type { AntigravityQuotaState, AntigravityQuotaSubscription } from '@/types';
+import type { AntigravityQuotaState } from '@/types';
 import { InfoTip } from '@/components/ui/Tooltip';
 import { planValueClassForTier, resolveAntigravityCardTier } from '../../cardTier';
 import { QuotaMeter } from '../../components/QuotaMeter';
@@ -13,6 +13,7 @@ import { collectQuotaRowInstants, pickUrgentRowId } from '../../resetSchedule';
 import type { QuotaBodyProps } from '../../types';
 import { getNextAntigravityCountdownUpdateDelay } from './countdown';
 import {
+  getAntigravityPlanLabel,
   resolveAntigravityBucketLabelKey,
   resolveAntigravityGroupLabelKey,
   resolveAntigravityGroupModels,
@@ -75,22 +76,6 @@ const translateAntigravityQuotaDescription = (
     });
   }
   return value;
-};
-
-const getAntigravityPlanLabel = (
-  subscription: AntigravityQuotaSubscription | null | undefined,
-  t: TFunction
-): string | null => {
-  if (!subscription) return null;
-  if (subscription.plan === 'free') return t('antigravity_subscription.plan_free');
-  if (subscription.plan === 'pro') return t('antigravity_subscription.plan_pro');
-  if (subscription.plan === 'ultra') return t('antigravity_subscription.plan_ultra');
-  if (subscription.plan === 'ultra-lite') return t('antigravity_subscription.plan_ultra_lite');
-  return (
-    subscription.tierName ||
-    subscription.tierId ||
-    (subscription.plan === 'unknown' ? t('antigravity_subscription.plan_unknown') : null)
-  );
 };
 
 export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<AntigravityQuotaState>) {
@@ -180,7 +165,7 @@ export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<Antigrav
                 const percentLabel = shouldShowAntigravityQuotaAvailable(bucket, group.buckets)
                   ? t('antigravity_quota.quota_available')
                   : t('antigravity_quota.remaining_percent', {
-                      percent: Math.round(percent),
+                      percent: Math.round(percent * 100) / 100,
                     });
                 const resetLabel = formatAntigravityResetLabel(bucket.resetTime, t, nowMs);
                 const bucketLabel = translateAntigravityQuotaLabel(
@@ -197,7 +182,7 @@ export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<Antigrav
 
                 return (
                   <div key={bucket.id} className={classes.quotaRow}>
-                    <div className={classes.quotaRowHeader}>
+                    <div className={classes.quotaRowHeader} data-antigravity-quota-row="">
                       <span className={classes.quotaModel} title={bucketDescription}>
                         {bucketLabel}
                       </span>

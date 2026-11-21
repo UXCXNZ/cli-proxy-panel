@@ -5,6 +5,7 @@
  */
 
 import type { TFunction } from 'i18next';
+import type { AntigravityQuotaState } from '@/types';
 import {
   BUSINESS_PREMIUM_CODEX_PLAN_TYPE,
   PRO_CODEX_PLAN_TYPE,
@@ -12,14 +13,16 @@ import {
   PRO_MAX_CODEX_PLAN_TYPES,
   normalizePlanType,
 } from '@/utils/quota';
+import { getAntigravityPlanLabel } from '../providers/antigravity/labels';
 import type { QuotaProviderType } from '../providers/types';
 import { formatDay, formatIn, formatWhen } from './accountsFormat';
 import type { FreeReset, ResetScope } from './accountsModel';
-import type { AccountLimit, Verdict } from './accountsRules';
+import { figureFor, type AccountLimit, type Verdict } from './accountsRules';
 
 const K = 'quota_management.accounts';
 
 export function limitLabel(t: TFunction, limit: AccountLimit): string {
+  if (limit.labelKey) return t(limit.labelKey);
   if (limit.scope === 'model') {
     const name = limit.name ?? '';
     return limit.verbatim || limit.window !== 'session'
@@ -108,7 +111,10 @@ export function verdictText(
 
   if (verdict.kind === 'low') {
     parts.push(
-      t(`${K}.sub_low`, { label: limitLabel(t, verdict.limit), percent: verdict.limit.left })
+      t(`${K}.sub_low`, {
+        label: limitLabel(t, verdict.limit),
+        percent: figureFor(verdict.limit.left, 'left'),
+      })
     );
   }
   if (when) parts.push(t(`${K}.sub_resets`, when));
@@ -124,6 +130,9 @@ export function planLabelFor(
   provider: QuotaProviderType,
   quota: unknown
 ): string | null {
+  if (provider === 'antigravity') {
+    return getAntigravityPlanLabel((quota as AntigravityQuotaState | undefined)?.subscription, t);
+  }
   const planType = (quota as { planType?: string | null } | undefined)?.planType;
   if (!planType) return null;
   if (provider === 'claude') return t(`claude_quota.${planType}`);

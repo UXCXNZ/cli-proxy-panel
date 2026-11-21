@@ -17,7 +17,7 @@ export type Tone = 'low' | 'mid' | 'ok';
 export type LimitScope = 'account' | 'model';
 export type LimitWindow = 'session' | 'weekly' | 'monthly';
 
-/** One quota limit on an account, already reduced to whole percent left. */
+/** One quota limit on an account, expressed as a percentage remaining. */
 export interface AccountLimit {
   id: string;
   scope: LimitScope;
@@ -26,7 +26,9 @@ export interface AccountLimit {
   name: string | null;
   /** True when `name` is the provider's own full label, shown as it is. */
   verbatim?: boolean;
-  /** Whole percent left, 0..100. */
+  /** Translated name for a provider-specific summary row. */
+  labelKey?: string;
+  /** Percent left, 0..100. */
   left: number;
   resetAtMs: number | null;
 }
@@ -40,7 +42,7 @@ export const toneFor = (left: number): Tone =>
  * fills as quota is spent; in Left it empties.
  */
 export const figureFor = (left: number, mode: CountMode): number =>
-  mode === 'left' ? left : 100 - left;
+  Math.round((mode === 'left' ? left : 100 - left) * 100) / 100;
 
 export const isSpent = (limit: AccountLimit): boolean => limit.left <= 0;
 

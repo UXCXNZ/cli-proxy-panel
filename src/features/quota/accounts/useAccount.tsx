@@ -87,6 +87,7 @@ export function useAccount(props: AccountProps): AccountState {
   const file = entry.file;
   const adapter = QUOTA_ADAPTERS[entry.type];
   const isClaude = entry.type === 'claude';
+  const isCodex = entry.type === 'codex';
   const status = quota?.status ?? 'idle';
   const loading = status === 'loading';
   const disabled = !canRefresh || loading || resetting;
@@ -107,7 +108,7 @@ export function useAccount(props: AccountProps): AccountState {
     quota,
     onRefresh
   );
-  const codex = !isClaude && status === 'success' ? (quota as CodexQuotaState) : undefined;
+  const codex = isCodex && status === 'success' ? (quota as CodexQuotaState) : undefined;
   const canResetCodex =
     Boolean(codex) &&
     Boolean(adapter.resetQuota) &&
@@ -156,10 +157,11 @@ export function useAccount(props: AccountProps): AccountState {
   }, [wanted, claude]);
 
   const requestUse = (id?: string) => {
-    if (!isClaude) {
+    if (isCodex) {
       onReset();
       return;
     }
+    if (!isClaude) return;
     // An unresolved claim can only be retried; upstream's dialog owns that.
     if (!pending) setWanted(id ?? (usable.length === 1 ? usable[0].id : null));
     claude.openDialog();
@@ -224,7 +226,11 @@ export function useAccount(props: AccountProps): AccountState {
         quota?.error || t('common.unknown_error')
       ),
     }),
-    emptyText: t(`${adapter.i18nPrefix}.empty_windows`),
+    emptyText: t(
+      entry.type === 'antigravity'
+        ? 'antigravity_quota.empty_models'
+        : `${adapter.i18nPrefix}.empty_windows`
+    ),
     resets,
     resetList,
     canUse,

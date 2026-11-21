@@ -5,7 +5,7 @@
  */
 
 import { resetGrantHasNoUsage, type AnthropicResetGrant } from '@/services/api/claudeResetGrants';
-import type { ClaudeQuotaState, CodexRateLimitResetCredit } from '@/types';
+import type { AntigravityQuotaState, ClaudeQuotaState, CodexRateLimitResetCredit } from '@/types';
 import { DAY_MS } from '@/utils/time/durations';
 import { hasClaudeUsageData } from '../providers/claude/data';
 import type { QuotaProviderType } from '../providers/types';
@@ -17,7 +17,11 @@ import {
 } from './accountsRules';
 
 /** Providers drawn as account cards. Every other provider keeps upstream's card. */
-export const ACCOUNT_CARD_PROVIDERS: readonly QuotaProviderType[] = ['claude', 'codex'];
+export const ACCOUNT_CARD_PROVIDERS: readonly QuotaProviderType[] = [
+  'claude',
+  'codex',
+  'antigravity',
+];
 
 export const isAccountCardProvider = (provider: QuotaProviderType): boolean =>
   ACCOUNT_CARD_PROVIDERS.includes(provider);
@@ -70,6 +74,30 @@ function codexShape(window: WindowLike): LimitShape {
   return { scope: 'model', window: windowFromId(id), name: window.label ?? id, verbatim: true };
 }
 
+const GEMINI_SUMMARY_LIMITS = [
+  { id: 'gemini-5h', window: 'session', labelKey: 'antigravity_quota.summary_five_hour' },
+  { id: 'gemini-weekly', window: 'weekly', labelKey: 'antigravity_quota.summary_weekly' },
+] as const;
+
+function antigravityLimits(quota: AntigravityQuotaState | undefined): AccountLimit[] {
+  const buckets = quota?.groups.flatMap((group) => group.buckets) ?? [];
+  return GEMINI_SUMMARY_LIMITS.flatMap(({ id, window, labelKey }) => {
+    const bucket = buckets.find((item) => item.id.toLowerCase() === id);
+    if (!bucket || !Number.isFinite(bucket.remainingFraction)) return [];
+    return [
+      {
+        id: bucket.id,
+        scope: 'model',
+        name: 'Gemini',
+        window,
+        labelKey,
+        left: Math.min(1, Math.max(0, bucket.remainingFraction)) * 100,
+        resetAtMs: bucket.resetAtMs ?? parseMs(bucket.resetTime),
+      },
+    ];
+  });
+}
+
 /**
  * Reduce a provider quota state to its limits, in reading order.
  *
@@ -78,6 +106,8 @@ function codexShape(window: WindowLike): LimitShape {
  * because Claude keeps its last windows while refreshing or after a failed read.
  */
 export function deriveLimits(provider: QuotaProviderType, quota: unknown): AccountLimit[] | null {
+  if (provider === 'antigravity')
+    return antigravityLimits(quota as AntigravityQuotaState | undefined);
   if (provider !== 'claude' && provider !== 'codex') return null;
   const windows = (quota as { windows?: WindowLike[] } | undefined)?.windows ?? [];
   const limits: AccountLimit[] = [];

@@ -451,6 +451,8 @@
     "missing_project_id": "Antigravity 자격 증명에 project_id가 없습니다. 프로젝트를 찾으려면 다시 로그인하거나 자격 증명을 새로 고침하세요.",
     "empty_models": "사용 가능한 할당량 데이터가 없습니다",
     "plan_label": "플랜",
+    "summary_five_hour": "Gemini 5시간",
+    "summary_weekly": "Gemini 주간",
     "group_gemini_models": "Gemini 모델",
     "group_claude_gpt_models": "Claude 및 GPT 모델",
     "group_models_description": "이 그룹의 모델: {{models}}",

@@ -449,6 +449,8 @@
     "missing_project_id": "Antigravity 憑證缺少 project_id。請重新登入或重新整理憑證以探索專案。",
     "empty_models": "暫無配額資料",
     "plan_label": "方案",
+    "summary_five_hour": "Gemini 5 小時",
+    "summary_weekly": "Gemini 每週",
     "group_gemini_models": "Gemini 模型",
     "group_claude_gpt_models": "Claude 與 GPT 模型",
     "group_models_description": "此分組包含：{{models}}",
