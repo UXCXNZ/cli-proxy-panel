@@ -14,6 +14,9 @@ import { AccountsView } from '../src/features/quota/accounts/AccountsView';
 import type { AccountsSettings } from '../src/features/quota/accounts/accountsSettings';
 import type { QuotaFileEntry } from '../src/features/quota/logic';
 import type { QuotaCardState } from '../src/features/quota/providers';
+import { AntigravityQuotaBody } from '../src/features/quota/providers/antigravity/AntigravityQuotaBody';
+import { bindQuotaClasses, QUOTA_CLASS_KEYS } from '../src/features/quota/types';
+import type { AntigravityQuotaState } from '../src/types';
 
 const NOW = Date.parse('2026-11-17T00:34:00Z');
 const DAY = 24 * 3_600_000;
@@ -271,7 +274,7 @@ describe('accounts view on the quota page', () => {
     expect(markup.match(/<article/g)?.length).toBe(3);
   });
 
-  test('Antigravity has two Gemini figures, a Pro badge and its own Details and Refresh', () => {
+  test('Antigravity has two Gemini figures, a Pro badge, Other Google limits and Refresh', () => {
     const card = view({ view: 'cards', mode: 'left' })
       .split('<article')
       .find((item) => item.includes('gemini@example.com'));
@@ -280,11 +283,42 @@ describe('accounts view on the quota page', () => {
     expect(card).toContain('99.24%<small>left</small>');
     expect(card).toContain('Gemini weekly');
     expect(card).toContain('99.78%<small>left</small>');
-    expect(card).toContain('>Details</button>');
+    expect(card).toContain('>Other Google limits</button>');
     expect(card).toContain('>Refresh</button>');
     expect(card).not.toContain('Claude and GPT models');
     expect(card).not.toContain('free resets');
     expect(card).not.toContain('Use a reset');
+  });
+
+  test('Other Google limits keeps the extra groups and removes the summary rows and plan', () => {
+    const quota = quotas.antigravity as unknown as AntigravityQuotaState;
+    const classes = bindQuotaClasses(
+      Object.fromEntries(QUOTA_CLASS_KEYS.map((key) => [key, key])),
+      'test'
+    );
+    const argon = {
+      id: 'argon',
+      label: 'Gemini 4 Argon',
+      buckets: [{ id: 'gemini-argon-wtu-weekly', label: 'Weekly limit', remainingFraction: 0.8 }],
+    };
+    const markup = renderToStaticMarkup(
+      createElement(AntigravityQuotaBody, {
+        classes,
+        quota: { ...quota, groups: [...quota.groups, argon] },
+        otherLimitsOnly: true,
+      })
+    );
+    expect(markup).toContain('Claude and GPT models');
+    expect(markup).toContain('Gemini 4 Argon');
+    expect(markup).toContain('42% remaining');
+    expect(markup).not.toContain('Gemini models');
+    expect(markup).not.toContain('data-quota-plan');
+    expect(markup).not.toContain('class="quotaBar"');
+
+    const full = renderToStaticMarkup(createElement(AntigravityQuotaBody, { classes, quota }));
+    expect(full).toContain('Gemini models');
+    expect(full).toContain('99.24% remaining');
+    expect(full).toContain('data-quota-plan');
   });
 
   test('hiding emails masks the name', () => {

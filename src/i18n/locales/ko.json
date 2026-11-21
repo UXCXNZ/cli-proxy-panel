@@ -451,6 +451,8 @@
     "missing_project_id": "Antigravity 자격 증명에 project_id가 없습니다. 프로젝트를 찾으려면 다시 로그인하거나 자격 증명을 새로 고침하세요.",
     "empty_models": "사용 가능한 할당량 데이터가 없습니다",
     "plan_label": "플랜",
+    "other_google_limits": "기타 Google 한도",
+    "empty_other_limits": "보고된 기타 Google 한도가 없습니다.",
     "summary_five_hour": "Gemini 5시간",
     "summary_weekly": "Gemini 주간",
     "group_gemini_models": "Gemini 모델",

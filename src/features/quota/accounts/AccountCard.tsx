@@ -6,10 +6,11 @@
 
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { CodexQuotaState } from '@/types';
+import type { AntigravityQuotaState, CodexQuotaState } from '@/types';
 import bodyStyles from '../components/QuotaBody.module.scss';
 import type { QuotaFileEntry } from '../logic';
 import { QUOTA_ADAPTERS, type QuotaCardState } from '../providers';
+import { AntigravityQuotaBody } from '../providers/antigravity/AntigravityQuotaBody';
 import { CodexCreditOverageDialog } from '../providers/codex/CodexCreditOverageDialog';
 import { CodexCreditOverageRow } from '../providers/codex/CodexCreditOverageRow';
 import { useCodexCreditOverage } from '../providers/codex/useCodexCreditOverage';
@@ -46,6 +47,17 @@ function AccountDetails(props: AccountDetailsProps) {
     entry.type === 'codex' ? (quota as CodexQuotaState | undefined) : undefined,
     props.disabled
   );
+  if (entry.type === 'antigravity') {
+    return props.showBody && quota ? (
+      <AntigravityQuotaBody
+        quota={quota as AntigravityQuotaState}
+        classes={quotaClasses}
+        otherLimitsOnly
+      />
+    ) : (
+      <div className={quotaClasses.quotaMessage}>{t('antigravity_quota.empty_models')}</div>
+    );
+  }
   return (
     <>
       <div className={styles.fileRow}>
@@ -98,6 +110,7 @@ export type AccountCardProps = AccountProps & {
 };
 
 export function AccountCard(props: AccountCardProps) {
+  const { t } = useTranslation();
   const account = useAccount(props);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const resetsRef = useRef<HTMLDivElement>(null);
@@ -111,6 +124,9 @@ export function AccountCard(props: AccountCardProps) {
     <AccountCardView
       {...account}
       detailsOpen={detailsOpen}
+      detailsLabel={
+        props.entry.type === 'antigravity' ? t('antigravity_quota.other_google_limits') : undefined
+      }
       onToggleDetails={() => setDetailsOpen((open) => !open)}
       onShowResets={showResets}
       details={

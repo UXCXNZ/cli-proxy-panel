@@ -451,6 +451,8 @@
     "missing_project_id": "Credential Antigravity thiếu project_id. Đăng nhập lại hoặc làm mới credential để xác định project.",
     "empty_models": "Chưa có dữ liệu quota",
     "plan_label": "Gói",
+    "other_google_limits": "Giới hạn khác của Google",
+    "empty_other_limits": "Google chưa báo cáo giới hạn nào khác.",
     "summary_five_hour": "Gemini 5 giờ",
     "summary_weekly": "Gemini hằng tuần",
     "group_gemini_models": "Model Gemini",

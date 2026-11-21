@@ -13,6 +13,7 @@ import { collectQuotaRowInstants, pickUrgentRowId } from '../../resetSchedule';
 import type { QuotaBodyProps } from '../../types';
 import { getNextAntigravityCountdownUpdateDelay } from './countdown';
 import {
+  GEMINI_SUMMARY_LIMITS,
   getAntigravityPlanLabel,
   resolveAntigravityBucketLabelKey,
   resolveAntigravityGroupLabelKey,
@@ -78,10 +79,25 @@ const translateAntigravityQuotaDescription = (
   return value;
 };
 
-export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<AntigravityQuotaState>) {
+export function AntigravityQuotaBody({
+  quota,
+  classes,
+  otherLimitsOnly = false,
+}: QuotaBodyProps<AntigravityQuotaState> & { otherLimitsOnly?: boolean }) {
   const { t } = useTranslation();
-  const groups = quota.groups ?? [];
-  const planLabel = getAntigravityPlanLabel(quota.subscription, t);
+  const visibleQuota = useMemo(() => {
+    if (!otherLimitsOnly) return quota;
+    const groups = (quota.groups ?? [])
+      .map((group) => ({
+        ...group,
+        buckets: group.buckets.filter(
+          (bucket) => !GEMINI_SUMMARY_LIMITS.some(({ id }) => id === bucket.id.toLowerCase())
+        ),
+      }))
+      .filter((group) => group.buckets.length > 0);
+    return { ...quota, groups };
+  }, [quota, otherLimitsOnly]);
+  const planLabel = otherLimitsOnly ? null : getAntigravityPlanLabel(quota.subscription, t);
   const planValueClass = planValueClassForTier(
     resolveAntigravityCardTier(quota.subscription?.plan),
     classes
@@ -89,12 +105,12 @@ export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<Antigrav
   const serverTimeOffsetMs = quota.serverTimeOffsetMs ?? 0;
   const resetTimestamps = useMemo(
     () =>
-      (quota.groups ?? []).flatMap((group) =>
+      (visibleQuota.groups ?? []).flatMap((group) =>
         group.buckets
           .map((bucket) => (bucket.resetTime ? new Date(bucket.resetTime).getTime() : Number.NaN))
           .filter(Number.isFinite)
       ),
-    [quota.groups]
+    [visibleQuota.groups]
   );
   // 首屏直接显示准确文案；后续 effect 会在最近的分钟边界更新并重新排程。
   const [nowMs, setNowMs] = useState(() => Date.now() + serverTimeOffsetMs);
@@ -120,9 +136,10 @@ export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<Antigrav
   // Ranked against this provider's own server-corrected clock rather than the
   // shared one, so the final-hour warning and the countdown always agree.
   const soonestRowId = useMemo(
-    () => pickUrgentRowId(collectQuotaRowInstants('antigravity', quota), nowMs),
-    [quota, nowMs]
+    () => pickUrgentRowId(collectQuotaRowInstants('antigravity', visibleQuota), nowMs),
+    [visibleQuota, nowMs]
   );
+  const groups = visibleQuota.groups ?? [];
 
   return (
     <>
@@ -135,7 +152,13 @@ export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<Antigrav
         </div>
       )}
       {groups.length === 0 ? (
-        <div className={classes.quotaMessage}>{t('antigravity_quota.empty_models')}</div>
+        <div className={classes.quotaMessage}>
+          {t(
+            otherLimitsOnly
+              ? 'antigravity_quota.empty_other_limits'
+              : 'antigravity_quota.empty_models'
+          )}
+        </div>
       ) : (
         groups.map((group) => {
           const groupLabel = translateAntigravityQuotaLabel(
@@ -200,7 +223,9 @@ export function AntigravityQuotaBody({ quota, classes }: QuotaBodyProps<Antigrav
                         </span>
                       </div>
                     </div>
-                    <QuotaMeter percent={percent} classes={classes} index={index} />
+                    {!otherLimitsOnly && (
+                      <QuotaMeter percent={percent} classes={classes} index={index} />
+                    )}
                   </div>
                 );
               })}

@@ -454,6 +454,8 @@
     "missing_project_id": "В учётных данных Antigravity отсутствует project_id. Войдите заново или обновите учётные данные, чтобы определить проект.",
     "empty_models": "Данные по квоте отсутствуют",
     "plan_label": "План",
+    "other_google_limits": "Другие лимиты Google",
+    "empty_other_limits": "Другие лимиты Google не указаны.",
     "summary_five_hour": "Gemini за 5 часов",
     "summary_weekly": "Gemini за неделю",
     "group_gemini_models": "Модели Gemini",

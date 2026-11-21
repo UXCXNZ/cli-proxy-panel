@@ -8,6 +8,11 @@
 import type { TFunction } from 'i18next';
 import type { AntigravityQuotaSubscription } from '@/types';
 
+export const GEMINI_SUMMARY_LIMITS = [
+  { id: 'gemini-5h', window: 'session', labelKey: 'antigravity_quota.summary_five_hour' },
+  { id: 'gemini-weekly', window: 'weekly', labelKey: 'antigravity_quota.summary_weekly' },
+] as const;
+
 export const getAntigravityPlanLabel = (
   subscription: AntigravityQuotaSubscription | null | undefined,
   t: TFunction

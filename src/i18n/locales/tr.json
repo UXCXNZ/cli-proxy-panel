@@ -451,6 +451,8 @@
     "missing_project_id": "Antigravity Kimlik Bilgisinde project_id Eksik. Projeyi Bulmak için Yeniden Giriş Yap veya Kimlik Bilgisini Yenile.",
     "empty_models": "Kullanılabilir Kota Verisi Yok",
     "plan_label": "Plan",
+    "other_google_limits": "Diğer Google limitleri",
+    "empty_other_limits": "Başka Google limiti bildirilmedi.",
     "summary_five_hour": "Gemini 5 saatlik",
     "summary_weekly": "Gemini haftalık",
     "group_gemini_models": "Gemini Modelleri",

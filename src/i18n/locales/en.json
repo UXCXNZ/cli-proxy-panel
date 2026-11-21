@@ -451,6 +451,8 @@
     "missing_project_id": "Antigravity credential missing project_id. Re-login or refresh the credential to discover the project.",
     "empty_models": "No quota data available",
     "plan_label": "Plan",
+    "other_google_limits": "Other Google limits",
+    "empty_other_limits": "No other Google limits reported.",
     "summary_five_hour": "Gemini 5-hour",
     "summary_weekly": "Gemini weekly",
     "group_gemini_models": "Gemini models",

@@ -7,6 +7,7 @@
 import { resetGrantHasNoUsage, type AnthropicResetGrant } from '@/services/api/claudeResetGrants';
 import type { AntigravityQuotaState, ClaudeQuotaState, CodexRateLimitResetCredit } from '@/types';
 import { DAY_MS } from '@/utils/time/durations';
+import { GEMINI_SUMMARY_LIMITS } from '../providers/antigravity/labels';
 import { hasClaudeUsageData } from '../providers/claude/data';
 import type { QuotaProviderType } from '../providers/types';
 import {
@@ -73,11 +74,6 @@ function codexShape(window: WindowLike): LimitShape {
   }
   return { scope: 'model', window: windowFromId(id), name: window.label ?? id, verbatim: true };
 }
-
-const GEMINI_SUMMARY_LIMITS = [
-  { id: 'gemini-5h', window: 'session', labelKey: 'antigravity_quota.summary_five_hour' },
-  { id: 'gemini-weekly', window: 'weekly', labelKey: 'antigravity_quota.summary_weekly' },
-] as const;
 
 function antigravityLimits(quota: AntigravityQuotaState | undefined): AccountLimit[] {
   const buckets = quota?.groups.flatMap((group) => group.buckets) ?? [];

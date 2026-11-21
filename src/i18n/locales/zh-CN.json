@@ -449,6 +449,8 @@
     "missing_project_id": "Antigravity 凭证缺少 project_id。请重新登录或刷新凭证以发现项目。",
     "empty_models": "暂无额度数据",
     "plan_label": "套餐",
+    "other_google_limits": "其他 Google 限额",
+    "empty_other_limits": "未报告其他 Google 限额。",
     "summary_five_hour": "Gemini 5 小时",
     "summary_weekly": "Gemini 每周",
     "group_gemini_models": "Gemini 模型",

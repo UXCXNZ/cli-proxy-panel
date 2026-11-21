@@ -53,6 +53,7 @@ export interface AccountCardViewProps {
   refreshDisabled: boolean;
   onRefresh: () => void;
   detailsOpen: boolean;
+  detailsLabel?: string;
   onToggleDetails: () => void;
   /** Opens Details at the resets list. */
   onShowResets: () => void;
@@ -162,7 +163,7 @@ export function AccountCardView(props: AccountCardViewProps) {
                 onClick={props.onToggleDetails}
                 aria-expanded={props.detailsOpen}
               >
-                {t(`${K}.details`)}
+                {props.detailsLabel ?? t(`${K}.details`)}
               </button>
               <button
                 type="button"
@@ -175,7 +176,15 @@ export function AccountCardView(props: AccountCardViewProps) {
               </button>
             </div>
           </footer>
-          {props.detailsOpen && <div className={styles.details}>{props.details}</div>}
+          {props.detailsOpen && (
+            <div
+              className={
+                identity.providerType === 'antigravity' ? styles.googleDetails : styles.details
+              }
+            >
+              {props.details}
+            </div>
+          )}
         </>
       )}
       {props.children}
